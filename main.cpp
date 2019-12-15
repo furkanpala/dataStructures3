@@ -46,7 +46,8 @@ struct Network
 {
     BaseStation *centralController;
     void create();
-    void close(BaseStation *);
+    void emptyNetwork(BaseStation *);
+    void close();
     void insertBS(BaseStation *);
     void insertMH(MobileHost *);
     void DFS_traverse(BaseStation *);
@@ -172,7 +173,7 @@ void Network::processMessages(MessageQueue *queue)
     }
 }
 
-void Network::close(BaseStation *BS)
+void Network::emptyNetwork(BaseStation *BS)
 {
     if (BS && BS->child == NULL)
     {
@@ -181,6 +182,14 @@ void Network::close(BaseStation *BS)
         {
             p = BS;
             BS = BS->right;
+            MobileHost *t;
+            while (p->counterPart)
+            {
+                t = p->counterPart;
+                p->counterPart = p->counterPart->right;
+                delete t;
+            }
+
             delete p;
         }
 
@@ -188,15 +197,22 @@ void Network::close(BaseStation *BS)
     }
 
     BaseStation *traverse = BS;
-    while (traverse)
+    BaseStation *traverse2 = traverse;
+    while (traverse2)
     {
-        close(traverse->child);
-        delete traverse->child;
-        traverse->child = NULL;
-        traverse = traverse->right;
+        traverse = traverse2;
+        emptyNetwork(traverse2->child);
+        traverse2->child = NULL;
+        traverse2 = traverse;
+        traverse2 = traverse2->right;
+        delete traverse;
     }
-    delete BS;
-    BS = NULL;
+}
+
+void Network::close()
+{
+    emptyNetwork(centralController);
+    centralController = NULL;
 }
 // NETWORK METHODS END
 
@@ -326,8 +342,7 @@ int main(int argc, char *argv[])
     inFile.close();
     // READ MESSAGES FILE END
     network.processMessages(&queue);
-    network.close(network.centralController);
-    network.centralController = NULL;
+    network.close();
     queue.close();
 
     return 0;
