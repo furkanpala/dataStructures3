@@ -144,23 +144,35 @@ void Network::DFS_traverse(BaseStation *BS, int id)
 
 BaseStation *Network::findBS(BaseStation *BS, int id)
 {
-    if (BS && BS->id == id)
+    if (BS->id == id)
         return BS;
-    else
+    BaseStation *traverse = BS->child;
+    BaseStation *found;
+    while (traverse)
     {
-        BaseStation *traverse, *found;
-        traverse = BS;
-        while (traverse)
-        {
-            found = traverse;
-            if (found->id == id)
-                return found;
-            found = findBS(traverse->child, id);
-            if (found && found->id == id)
-                return found;
-            traverse = traverse->right;
-        }
+        found = findBS(traverse, id);
+        if (found)
+            return found;
+        traverse = traverse->right;
     }
+
+    // if (BS && BS->id == id)
+    //     return BS;
+    // else
+    // {
+    //     BaseStation *traverse, *found;
+    //     traverse = BS;
+    //     while (traverse)
+    //     {
+    //         found = traverse;
+    //         if (found->id == id)
+    //             return found;
+    //         found = findBS(traverse->child, id);
+    //         if (found && found->id == id)
+    //             return found;
+    //         traverse = traverse->right;
+    //     }
+    // }
 }
 
 void Network::insertMH(MobileHost *newMH)
@@ -270,6 +282,7 @@ Message *MessageQueue::dequeue()
     front = front->next;
     return foremostMessage;
 }
+// MESSAGE METHODS END
 
 int main(int argc, char *argv[])
 {
