@@ -49,7 +49,7 @@ struct Network
     void close();
     void insertBS(BaseStation *);
     void insertMH(MobileHost *);
-    void DFS_traverse(BaseStation *);
+    void DFS_traverse(BaseStation *, int id);
     BaseStation *findBS(BaseStation *, int id);
     MobileHost *findMH(BaseStation *, int id);
     void processMessages(MessageQueue *);
@@ -95,29 +95,51 @@ void Network::insertBS(BaseStation *newBS)
     }
 }
 
-void Network::DFS_traverse(BaseStation *BS)
+void Network::DFS_traverse(BaseStation *BS, int id)
 {
-    if (BS == NULL)
-        return;
-    else
+    cout << BS->id << " ";
+
+    BaseStation *traverse = BS->child;
+    while (traverse)
     {
-        BaseStation *traverse;
-        MobileHost *traverse2;
-        traverse = BS;
-        while (traverse)
-        {
-            cout << traverse->id << " | ";
-            traverse2 = traverse->counterPart;
-            while (traverse2)
-            {
-                cout << traverse2->id << " ";
-                traverse2 = traverse2->right;
-            }
-            cout << endl;
-            DFS_traverse(traverse->child);
-            traverse = traverse->right;
-        }
+        DFS_traverse(traverse, id);
+        traverse = traverse->right;
     }
+
+    // cout << BS->id << " ";
+    // if (BS->child == NULL || BS->id == id)
+    //     return;
+    // BaseStation *traverse;
+    // traverse = BS;
+    // while (traverse)
+    // {
+    //     DFS_traverse(traverse->child, id);
+    //     traverse = traverse->right;
+    // }
+
+    // if (BS == NULL)
+    //     return;
+    // if (BS->id == id)
+    //     return BS;
+    // else
+    // {
+    //     BaseStation *traverse;
+    //     MobileHost *traverse2;
+    //     traverse = BS;
+    //     while (traverse)
+    //     {
+    //         cout << traverse->id << " | ";
+    //         traverse2 = traverse->counterPart;
+    //         while (traverse2)
+    //         {
+    //             cout << traverse2->id << " ";
+    //             traverse2 = traverse2->right;
+    //         }
+    //         cout << endl;
+    //         DFS_traverse(traverse->child);
+    //         traverse = traverse->right;
+    //     }
+    // }
 }
 
 BaseStation *Network::findBS(BaseStation *BS, int id)
@@ -157,23 +179,40 @@ void Network::insertMH(MobileHost *newMH)
 
 MobileHost *Network::findMH(BaseStation *BS, int id)
 {
-    MobileHost *MH = NULL;
-    BaseStation *traverse;
-    if (BS)
-        MH = BS->getMobileHost(BS->counterPart, id);
+    cout << BS->id << " ";
+    MobileHost *MH = BS->getMobileHost(BS->counterPart, id);
     if (MH)
         return MH;
-    traverse = BS;
+
+    BaseStation *traverse = BS->child;
     while (traverse)
     {
-        MH = traverse->getMobileHost(traverse->counterPart, id);
-        if (MH)
-            return MH;
-        MH = findMH(traverse->child, id);
+        MH = findMH(traverse, id);
         if (MH)
             return MH;
         traverse = traverse->right;
     }
+
+    // MobileHost *MH = NULL;
+    // BaseStation *traverse;
+    // if (BS)
+    // {
+    //     MH = BS->getMobileHost(BS->counterPart, id);
+    //     if (MH)
+    //         return MH;
+    // }
+    // traverse = BS;
+    // while (traverse)
+    // {
+    //     cout << traverse->id << " ";
+    //     MH = traverse->getMobileHost(traverse->counterPart, id);
+    //     if (MH)
+    //         return MH;
+    //     MH = findMH(traverse->child, id);
+    //     if (MH)
+    //         return MH;
+    //     traverse = traverse->right;
+    // }
 }
 
 void Network::processMessages(MessageQueue *queue)
@@ -181,7 +220,19 @@ void Network::processMessages(MessageQueue *queue)
     while (!(queue->isEmpty()))
     {
         Message *nextMessage;
+        MobileHost *targetMH;
         nextMessage = queue->dequeue();
+        cout << "Traversing:";
+        targetMH = findMH(centralController, nextMessage->target_id);
+
+        cout << endl;
+
+        if (targetMH == NULL)
+            cout << "Can not be reached the mobile host mh_" << nextMessage->target_id << "at the moment" << endl;
+        else
+        {
+            cout << "Message:" << nextMessage->content << endl;
+        }
     }
 }
 // NETWORK METHODS END
@@ -296,6 +347,8 @@ int main(int argc, char *argv[])
         queue.enqueue(newMessage);
     }
     // READ MESSAGES FILE END
+
+    network.processMessages(&queue);
 
     return 0;
 }
