@@ -46,10 +46,10 @@ struct Network
 {
     BaseStation *centralController;
     void create();
-    void close();
+    void close(BaseStation *);
     void insertBS(BaseStation *);
     void insertMH(MobileHost *);
-    void DFS_traverse(BaseStation *, int id);
+    void DFS_traverse(BaseStation *);
     BaseStation *findBS(BaseStation *, int id);
     MobileHost *findMH(BaseStation *, int id);
     void processMessages(MessageQueue *);
@@ -95,51 +95,16 @@ void Network::insertBS(BaseStation *newBS)
     }
 }
 
-void Network::DFS_traverse(BaseStation *BS, int id)
+void Network::DFS_traverse(BaseStation *BS)
 {
     cout << BS->id << " ";
 
     BaseStation *traverse = BS->child;
     while (traverse)
     {
-        DFS_traverse(traverse, id);
+        DFS_traverse(traverse);
         traverse = traverse->right;
     }
-
-    // cout << BS->id << " ";
-    // if (BS->child == NULL || BS->id == id)
-    //     return;
-    // BaseStation *traverse;
-    // traverse = BS;
-    // while (traverse)
-    // {
-    //     DFS_traverse(traverse->child, id);
-    //     traverse = traverse->right;
-    // }
-
-    // if (BS == NULL)
-    //     return;
-    // if (BS->id == id)
-    //     return BS;
-    // else
-    // {
-    //     BaseStation *traverse;
-    //     MobileHost *traverse2;
-    //     traverse = BS;
-    //     while (traverse)
-    //     {
-    //         cout << traverse->id << " | ";
-    //         traverse2 = traverse->counterPart;
-    //         while (traverse2)
-    //         {
-    //             cout << traverse2->id << " ";
-    //             traverse2 = traverse2->right;
-    //         }
-    //         cout << endl;
-    //         DFS_traverse(traverse->child);
-    //         traverse = traverse->right;
-    //     }
-    // }
 }
 
 BaseStation *Network::findBS(BaseStation *BS, int id)
@@ -155,24 +120,6 @@ BaseStation *Network::findBS(BaseStation *BS, int id)
             return found;
         traverse = traverse->right;
     }
-
-    // if (BS && BS->id == id)
-    //     return BS;
-    // else
-    // {
-    //     BaseStation *traverse, *found;
-    //     traverse = BS;
-    //     while (traverse)
-    //     {
-    //         found = traverse;
-    //         if (found->id == id)
-    //             return found;
-    //         found = findBS(traverse->child, id);
-    //         if (found && found->id == id)
-    //             return found;
-    //         traverse = traverse->right;
-    //     }
-    // }
 }
 
 void Network::insertMH(MobileHost *newMH)
@@ -204,27 +151,6 @@ MobileHost *Network::findMH(BaseStation *BS, int id)
             return MH;
         traverse = traverse->right;
     }
-
-    // MobileHost *MH = NULL;
-    // BaseStation *traverse;
-    // if (BS)
-    // {
-    //     MH = BS->getMobileHost(BS->counterPart, id);
-    //     if (MH)
-    //         return MH;
-    // }
-    // traverse = BS;
-    // while (traverse)
-    // {
-    //     cout << traverse->id << " ";
-    //     MH = traverse->getMobileHost(traverse->counterPart, id);
-    //     if (MH)
-    //         return MH;
-    //     MH = findMH(traverse->child, id);
-    //     if (MH)
-    //         return MH;
-    //     traverse = traverse->right;
-    // }
 }
 
 void Network::processMessages(MessageQueue *queue)
@@ -242,10 +168,35 @@ void Network::processMessages(MessageQueue *queue)
         if (targetMH == NULL)
             cout << "Can not be reached the mobile host mh_" << nextMessage->target_id << "at the moment" << endl;
         else
-        {
             cout << "Message:" << nextMessage->content << endl;
-        }
     }
+}
+
+void Network::close(BaseStation *BS)
+{
+    if (BS && BS->child == NULL)
+    {
+        BaseStation *p;
+        while (BS)
+        {
+            p = BS;
+            BS = BS->right;
+            delete p;
+        }
+
+        return;
+    }
+
+    BaseStation *traverse = BS;
+    while (traverse)
+    {
+        close(traverse->child);
+        delete traverse->child;
+        traverse->child = NULL;
+        traverse = traverse->right;
+    }
+    delete BS;
+    BS = NULL;
 }
 // NETWORK METHODS END
 
@@ -281,6 +232,19 @@ Message *MessageQueue::dequeue()
     foremostMessage = front;
     front = front->next;
     return foremostMessage;
+}
+
+void MessageQueue::close()
+{
+    Message *traverse;
+    while (front)
+    {
+        traverse = front;
+        front = front->next;
+        delete traverse;
+    }
+    front = NULL;
+    back = NULL;
 }
 // MESSAGE METHODS END
 
@@ -359,9 +323,12 @@ int main(int argc, char *argv[])
 
         queue.enqueue(newMessage);
     }
+    inFile.close();
     // READ MESSAGES FILE END
-
     network.processMessages(&queue);
+    network.close(network.centralController);
+    network.centralController = NULL;
+    queue.close();
 
     return 0;
 }
