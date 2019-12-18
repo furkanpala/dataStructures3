@@ -1,3 +1,8 @@
+/* @Author
+Student Name: Furkan Pala
+Student ID: 150180109
+Date: 18/12/2019 */
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -23,6 +28,24 @@ struct MessageQueue
     bool isEmpty();
 };
 // MESSAGE STRUCTURES END
+
+// STACK STRUCTURE
+struct BaseStationIDNode
+{
+    int id;
+    BaseStationIDNode *next;
+};
+struct BaseStationIDStack
+{
+    BaseStationIDNode *head;
+    void create();
+    void close();
+    void push(int id);
+    int pop();
+    bool isEmpty();
+    void makeEmpty();
+};
+// STACK STRUCTURE END
 
 // NETWORK STRUCTURES
 struct MobileHost
@@ -53,7 +76,10 @@ struct Network
     void DFS_traverse(BaseStation *);
     BaseStation *findBS(BaseStation *, int id);
     MobileHost *findMH(BaseStation *, int id);
-    void processMessages(MessageQueue *);
+    BaseStation *findParent(BaseStation *, BaseStation *, BaseStation *);
+    void addParentToStack(BaseStationIDStack *, BaseStation *);
+    void getPath(MobileHost *, BaseStationIDStack *);
+    void processMessages(MessageQueue *, BaseStationIDStack *);
 };
 // NETWORK STRUCTURES END
 
@@ -98,14 +124,25 @@ void Network::insertBS(BaseStation *newBS)
 
 void Network::DFS_traverse(BaseStation *BS)
 {
-    cout << BS->id << " ";
+    if (BS == NULL)
+        return;
 
-    BaseStation *traverse = BS->child;
-    while (traverse)
+    while (BS)
     {
-        DFS_traverse(traverse);
-        traverse = traverse->right;
+        cout << " " << BS->id;
+        if (BS->child)
+            DFS_traverse(BS->child);
+        BS = BS->right;
     }
+
+    // cout << BS->id << " ";
+
+    // BaseStation *traverse = BS->child;
+    // while (traverse)
+    // {
+    //     DFS_traverse(traverse);
+    //     traverse = traverse->right;
+    // }
 }
 
 BaseStation *Network::findBS(BaseStation *BS, int id)
@@ -154,7 +191,55 @@ MobileHost *Network::findMH(BaseStation *BS, int id)
     }
 }
 
-void Network::processMessages(MessageQueue *queue)
+BaseStation *Network::findParent(BaseStation *CC, BaseStation *parentBS, BaseStation *desiredBS)
+{
+    if (CC == NULL)
+        return NULL;
+    if (CC == desiredBS)
+        return parentBS;
+
+    BaseStation *found;
+
+    found = findParent(CC->child, CC, desiredBS);
+    if (found)
+        return found;
+    found = findParent(CC->right, parentBS, desiredBS);
+    if (found)
+        return found;
+}
+
+void Network::addParentToStack(BaseStationIDStack *stack, BaseStation *desiredBS)
+{
+    BaseStation *parent;
+    parent = findParent(centralController, NULL, desiredBS);
+
+    stack->push(parent->id);
+
+    if (parent->id == 0)
+        return;
+    addParentToStack(stack, parent);
+}
+
+void Network::getPath(MobileHost *MH, BaseStationIDStack *stack)
+{
+
+    BaseStation *parentBS = findBS(centralController, MH->parent_id);
+    stack->makeEmpty();
+    stack->push(parentBS->id);
+    addParentToStack(stack, parentBS);
+
+    //TODO: Bunu ayrı bir fonksiyona al
+    BaseStationIDNode *traverse;
+    traverse = stack->head;
+
+    while (traverse)
+    {
+        cout << traverse->id << " ";
+        traverse = traverse->next;
+    }
+}
+
+void Network::processMessages(MessageQueue *queue, BaseStationIDStack *stack)
 {
     while (!(queue->isEmpty()))
     {
@@ -169,7 +254,11 @@ void Network::processMessages(MessageQueue *queue)
         if (targetMH == NULL)
             cout << "Can not be reached the mobile host mh_" << nextMessage->target_id << "at the moment" << endl;
         else
-            cout << "Message:" << nextMessage->content << endl;
+        {
+            cout << "Message:" << nextMessage->content << " To: ";
+            getPath(targetMH, stack);
+            cout << endl;
+        }
     }
 }
 
@@ -189,7 +278,6 @@ void Network::emptyNetwork(BaseStation *BS)
                 p->counterPart = p->counterPart->right;
                 delete t;
             }
-
             delete p;
         }
 
@@ -264,6 +352,57 @@ void MessageQueue::close()
 }
 // MESSAGE METHODS END
 
+// STACK METHODS
+void BaseStationIDStack::create()
+{
+    head = NULL;
+}
+
+bool BaseStationIDStack::isEmpty()
+{
+    return head == NULL;
+}
+
+void BaseStationIDStack::push(int id)
+{
+    BaseStationIDNode *BS_id = new BaseStationIDNode;
+    BS_id->id = id;
+    BS_id->next = head;
+    head = BS_id;
+}
+
+int BaseStationIDStack::pop()
+{
+    BaseStationIDNode *foremostID;
+    int temp;
+    foremostID = head;
+    head = head->next;
+    temp = foremostID->id;
+    delete foremostID;
+    return temp;
+}
+
+void BaseStationIDStack::close()
+{
+    BaseStationIDNode *p;
+    while (head)
+    {
+        p = head;
+        head = head->next;
+        delete p;
+    }
+    head = NULL;
+}
+
+void BaseStationIDStack::makeEmpty()
+{
+    while (!isEmpty())
+    {
+        pop();
+    }
+}
+// STACK METHODS END
+
 int main(int argc, char *argv[])
 {
     Network network;
@@ -271,6 +410,9 @@ int main(int argc, char *argv[])
 
     MessageQueue queue;
     queue.create();
+
+    BaseStationIDStack stack;
+    stack.create();
 
     char *networkFileName, *messagesFileName;
     networkFileName = argv[1];
@@ -341,7 +483,9 @@ int main(int argc, char *argv[])
     }
     inFile.close();
     // READ MESSAGES FILE END
-    network.processMessages(&queue);
+
+    network.processMessages(&queue, &stack);
+    // cout << network.getPath(network.centralController, NULL, network.findBS(network.centralController, 9))->id;
     network.close();
     queue.close();
 
