@@ -44,6 +44,7 @@ struct BaseStationIDStack
     int pop();
     bool isEmpty();
     void print();
+    void makeEmpty();
 };
 // STACK STRUCTURE END
 
@@ -79,8 +80,8 @@ struct Network
     BaseStation *findParent(BaseStation *, BaseStation *, BaseStation *);
     void addParentsToStack(BaseStationIDStack *, BaseStation *);
     void getPath(MobileHost *);
-    bool getPath2(BaseStation *, BaseStation *);
-    void processMessages(MessageQueue *);
+    bool getPath2(BaseStation *, BaseStation *, BaseStationIDStack *);
+    void processMessages(MessageQueue *, BaseStationIDStack *);
 };
 // NETWORK STRUCTURES END
 
@@ -224,37 +225,35 @@ void Network::getPath(MobileHost *MH)
     stack.close();
 }
 
-bool Network::getPath2(BaseStation *root, BaseStation *BS)
+bool Network::getPath2(BaseStation *root, BaseStation *BS, BaseStationIDStack *stack)
 {
-    BaseStationIDStack stack;
-    stack.create();
-
     bool found = false;
     if (root->id == BS->id)
     {
-        stack.push(root->id);
+        stack->push(root->id);
         return true;
     }
+
     if (root->child)
     {
-        if ((found = getPath2(root->child, BS)))
+        if ((found = getPath2(root->child, BS, stack)))
         {
-            stack.push(root->id);
+            stack->push(root->id);
             return found;
         }
     }
+
     if (root->right)
     {
-        if ((found = getPath2(root->right, BS)))
+        if ((found = getPath2(root->right, BS, stack)))
         {
             return found;
         }
     }
-    stack.print();
-    stack.close();
+    stack->print();
 }
 
-void Network::processMessages(MessageQueue *queue)
+void Network::processMessages(MessageQueue *queue, BaseStationIDStack *stack)
 {
     while (!(queue->isEmpty()))
     {
@@ -270,8 +269,11 @@ void Network::processMessages(MessageQueue *queue)
             cout << "Can not be reached the mobile host mh_" << nextMessage->target_id << "at the moment" << endl;
         else
         {
+            stack->makeEmpty();
+            BaseStation *parentBSofTargetMH = findBS(centralController, targetMH->parent_id);
+            getPath2(centralController, parentBSofTargetMH, stack);
             cout << "Message:" << nextMessage->content << " To:";
-            getPath2(centralController, findBS(centralController, targetMH->parent_id));
+            stack->print();
             cout << "mh_" << nextMessage->target_id << endl;
         }
     }
@@ -418,6 +420,12 @@ void BaseStationIDStack::print()
         traverse = traverse->next;
     }
 }
+
+void BaseStationIDStack::makeEmpty()
+{
+    while ((!isEmpty()))
+        pop();
+}
 // STACK METHODS END
 
 int main(int argc, char *argv[])
@@ -427,6 +435,9 @@ int main(int argc, char *argv[])
 
     MessageQueue queue;
     queue.create();
+
+    BaseStationIDStack stack;
+    stack.create();
 
     char *networkFileName, *messagesFileName;
     networkFileName = argv[1];
@@ -498,9 +509,10 @@ int main(int argc, char *argv[])
     inFile.close();
     // READ MESSAGES FILE END
 
-    network.processMessages(&queue);
+    network.processMessages(&queue, &stack);
     network.close();
     queue.close();
+    stack.close();
 
     return 0;
 }
