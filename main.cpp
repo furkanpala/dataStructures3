@@ -77,10 +77,7 @@ struct Network
     void DFS_traverse(BaseStation *);
     BaseStation *findBS(BaseStation *, int id);
     MobileHost *findMH(BaseStation *, int id);
-    BaseStation *findParent(BaseStation *, BaseStation *, BaseStation *);
-    void addParentsToStack(BaseStationIDStack *, BaseStation *);
-    void getPath(MobileHost *);
-    bool getPath2(BaseStation *, BaseStation *, BaseStationIDStack *);
+    bool getPath(BaseStation *, BaseStation *, BaseStationIDStack *);
     void processMessages(MessageQueue *, BaseStationIDStack *);
 };
 // NETWORK STRUCTURES END
@@ -183,49 +180,7 @@ MobileHost *Network::findMH(BaseStation *BS, int id)
     }
 }
 
-BaseStation *Network::findParent(BaseStation *root, BaseStation *desiredBS, BaseStation *parentBS)
-{
-    if (root == NULL)
-        return NULL;
-    if (root == desiredBS)
-        return parentBS;
-
-    BaseStation *found;
-
-    found = findParent(root->child, desiredBS, root);
-    if (found)
-        return found;
-    found = findParent(root->right, desiredBS, parentBS);
-    if (found)
-        return found;
-}
-
-void Network::addParentsToStack(BaseStationIDStack *stack, BaseStation *desiredBS)
-{
-    BaseStation *parent;
-    parent = findParent(centralController, desiredBS, NULL);
-
-    stack->push(parent->id);
-
-    if (parent->id == 0)
-        return;
-    addParentsToStack(stack, parent);
-}
-
-void Network::getPath(MobileHost *MH)
-{
-    BaseStationIDStack stack;
-    stack.create();
-
-    BaseStation *parentBS = findBS(centralController, MH->parent_id);
-    stack.push(parentBS->id);
-    addParentsToStack(&stack, parentBS);
-
-    stack.print();
-    stack.close();
-}
-
-bool Network::getPath2(BaseStation *root, BaseStation *BS, BaseStationIDStack *stack)
+bool Network::getPath(BaseStation *root, BaseStation *BS, BaseStationIDStack *stack)
 {
     bool found = false;
     if (root->id == BS->id)
@@ -236,7 +191,7 @@ bool Network::getPath2(BaseStation *root, BaseStation *BS, BaseStationIDStack *s
 
     if (root->child)
     {
-        if ((found = getPath2(root->child, BS, stack)))
+        if ((found = getPath(root->child, BS, stack)))
         {
             stack->push(root->id);
             return found;
@@ -245,7 +200,7 @@ bool Network::getPath2(BaseStation *root, BaseStation *BS, BaseStationIDStack *s
 
     if (root->right)
     {
-        if ((found = getPath2(root->right, BS, stack)))
+        if ((found = getPath(root->right, BS, stack)))
         {
             return found;
         }
@@ -271,7 +226,7 @@ void Network::processMessages(MessageQueue *queue, BaseStationIDStack *stack)
         {
             stack->makeEmpty();
             BaseStation *parentBSofTargetMH = findBS(centralController, targetMH->parent_id);
-            getPath2(centralController, parentBSofTargetMH, stack);
+            getPath(centralController, parentBSofTargetMH, stack);
             cout << "Message:" << nextMessage->content << " To:";
             stack->print();
             cout << "mh_" << nextMessage->target_id << endl;
