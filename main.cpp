@@ -109,14 +109,17 @@ void Network::insertBS(BaseStation *newBS)
     else
     {
         BaseStation *parentBS = findBS(centralController, newBS->parent_id);
-        if (parentBS->child == NULL)
-            parentBS->child = newBS;
-        else
+        if (parentBS)
         {
-            BaseStation *traverse = parentBS->child;
-            while (traverse->right)
-                traverse = traverse->right;
-            traverse->right = newBS;
+            if (parentBS->child == NULL)
+                parentBS->child = newBS;
+            else
+            {
+                BaseStation *traverse = parentBS->child;
+                while (traverse->right)
+                    traverse = traverse->right;
+                traverse->right = newBS;
+            }
         }
     }
 }
@@ -151,14 +154,17 @@ BaseStation *Network::findBS(BaseStation *BS, int id)
 void Network::insertMH(MobileHost *newMH)
 {
     BaseStation *parentBS = findBS(centralController, newMH->parent_id);
-    if (parentBS->counterPart == NULL)
-        parentBS->counterPart = newMH;
-    else
+    if (parentBS)
     {
-        MobileHost *traverse = parentBS->counterPart;
-        while (traverse->right)
-            traverse = traverse->right;
-        traverse->right = newMH;
+        if (parentBS->counterPart == NULL)
+            parentBS->counterPart = newMH;
+        else
+        {
+            MobileHost *traverse = parentBS->counterPart;
+            while (traverse->right)
+                traverse = traverse->right;
+            traverse->right = newMH;
+        }
     }
 }
 
