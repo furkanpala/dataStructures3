@@ -149,6 +149,7 @@ BaseStation *Network::findBS(BaseStation *BS, int id)
             return found;
         traverse = traverse->right;
     }
+    return NULL;
 }
 
 void Network::insertMH(MobileHost *newMH)
@@ -184,6 +185,7 @@ MobileHost *Network::findMH(BaseStation *BS, int id)
             return MH;
         traverse = traverse->right;
     }
+    return NULL;
 }
 
 bool Network::getPath(BaseStation *root, BaseStation *BS, BaseStationIDStack *stack)
@@ -212,6 +214,7 @@ bool Network::getPath(BaseStation *root, BaseStation *BS, BaseStationIDStack *st
         }
     }
     stack->print();
+    return found;
 }
 
 void Network::processMessages(MessageQueue *queue, BaseStationIDStack *stack)
@@ -227,7 +230,7 @@ void Network::processMessages(MessageQueue *queue, BaseStationIDStack *stack)
         cout << endl;
 
         if (targetMH == NULL)
-            cout << "Can not be reached the mobile host mh_" << nextMessage->target_id << "at the moment" << endl;
+            cout << "Can not be reached the mobile host mh_" << nextMessage->target_id << " at the moment" << endl;
         else
         {
             stack->makeEmpty();
